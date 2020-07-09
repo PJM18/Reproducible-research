@@ -1,0 +1,123 @@
+Project 1
+=========
+
+
+1:Loading the data into R
+```{r}
+setwd("C:/Users/peter/Desktop/R/Data/Reproducible Research")
+activity<- read.csv("activity.csv")
+```
+
+
+2:Histogram of total number of steps taken each day
+===
+```{r}
+dailysteps<-aggregate(steps~date, activity, sum, na.rm=T)
+    hist(dailysteps$steps,
+         breaks = 25, 
+         main = "Daily Steps",
+         xlab = "Number of Steps",
+         col = "blue")
+```
+
+
+
+3:Mean and median number of steps taken each day
+===
+```{r}
+mean<-mean(dailysteps$steps)
+median<-median(dailysteps$steps)
+```
+The mean number of steps taken each day is `r mean`  
+The median number of steps taken each day is `r median`
+
+
+
+4:Time series plot of the average number of steps taken
+===
+```{r}
+StepsPerInterval <- tapply(activity$steps, 
+                           activity$interval, mean, na.rm = TRUE)
+plot(as.numeric(names(StepsPerInterval)), 
+     StepsPerInterval, 
+     xlab = "Interval", 
+     ylab = "Steps", 
+     main = "Average Daily Activity Pattern", 
+     type = "l",
+     col="blue")
+```
+
+
+
+
+5:The 5-minute interval that, on average, contains the maximum number of steps
+===
+```{r}
+AvgMaxInter<-names(sort(StepsPerInterval, decreasing = TRUE)[1])
+MaxSteps <- sort(StepsPerInterval, decreasing = TRUE)[1]
+```
+The intervall containing, on average, the maximum number of steps is `r AvgMaxInter`.  
+It averages `r MaxSteps` steps
+  
+    
+6:Code to describe and show a strategy for imputing missing data
+===
+First we assess the number of NA's in the dataset
+```{r}
+ nas<-sum(is.na(activity$steps))
+```
+There are `r nas` missing values in this dataset
+These values for the intervals with missing values will be replaced by  
+the average number of steps per interval. The next step will compute this average and create a new dataset with the average replacing NA's.
+```{r}
+StepsPerInterval <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
+activity.split <- split(activity, activity$interval)
+for(i in 1:length(activity.split)){
+    activity.split[[i]]$steps[is.na(activity.split[[i]]$steps)] <- StepsPerInterval[i]
+}
+activity.imputed <- do.call("rbind", activity.split)
+activity.imputed <- activity.imputed[order(activity.imputed$date) ,]
+```
+Create a histogram of the total number of steps taken each day,according to the new dataset
+```{r}
+StepsPerDay.imputed <- tapply(activity.imputed$steps, 
+                              activity.imputed$date, sum)
+hist(StepsPerDay.imputed, 
+     xlab = "Number of Steps", 
+     main = "Histogram: Steps per Day (Imputed data)")
+```
+  
+Calculate the mean and median steps per day of the Imputed data
+
+```{r}
+imp.daily.mean <- mean(StepsPerDay.imputed, na.rm = TRUE)
+imp.daily.median <- median(StepsPerDay.imputed, na.rm = TRUE)
+```
+The mean number of steps in the imputed dataset is `r imp.daily.mean`.
+  
+The median number of steps in the imputed dataset is `r imp.daily.median`
+
+
+
+7:Are there differences in activity patterns between weekdays and weekends?
+===
+Create a new factor variable in the dataset with two levels - “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+```{r}
+activity.imputed$day <- ifelse(weekdays(as.Date(activity.imputed$date)) 
+                               == "Saturday" | weekdays(as.Date(activity.imputed$date)) 
+                               == "Sunday", "weekend", "weekday")
+```
+Make a panel plot containing a time series plot (i.e. type = "l"\color{red}{\verb|type = "l"|}type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r}
+StepsPerInterval.weekend <- tapply(activity.imputed[activity.imputed$day == "weekend" ,]$steps, activity.imputed[activity.imputed$day == "weekend" ,]$interval, mean, na.rm = TRUE)
+
+StepsPerInterval.weekday <- tapply(activity.imputed[activity.imputed$day == "weekday" ,]$steps, activity.imputed[activity.imputed$day == "weekday" ,]$interval, mean, na.rm = TRUE)
+par(mfrow=c(1,2))
+plot(as.numeric(names(StepsPerInterval.weekday)), 
+     StepsPerInterval.weekday, 
+     xlab = "Interval", 
+     ylab = "Steps", 
+     main = "Activity Pattern (Weekdays)", 
+     type = "l")
+
+```
